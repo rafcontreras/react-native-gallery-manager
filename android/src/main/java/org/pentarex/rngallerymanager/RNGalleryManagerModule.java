@@ -115,26 +115,35 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
 
         Cursor gallery = null;
         try {
-                    gallery = GalleryCursorManager.getQAlbumCursor(reactContext);
-                    WritableArray albums = new WritableNativeArray();
+            if(isQOrLater()){
+                gallery = GalleryCursorManager.getQAlbumCursor(reactContext);
+            } else {
+                gallery = GalleryCursorManager.getAlbumCursor(reactContext);
+            }
 
-                    gallery.moveToFirst();
-                    List<String> albumList = new ArrayList<String>();
-                    int total = 0;
-                    do {
-                        WritableMap album = getAlbum(gallery);
-                        if (total > 0 && album.getString("title").equals(albumList.get(total-1))) {
+            gallery = GalleryCursorManager.getQAlbumCursor(reactContext);
+            WritableArray albums = new WritableNativeArray();
 
-                        } else {
-                            albums.pushMap(album);
-                            albumList.add(album.getString("title"));
-                            total += 1;
-                        }
-                    } while (gallery.moveToNext());
-                    response.putInt("totalAlbums", albumList.size());
-                    response.putArray("albums", albums);
+            gallery.moveToFirst();
+            List<String> albumList = new ArrayList<String>();
+            int total = 0;
 
-                    promise.resolve(response);
+            do {
+                WritableMap album = getAlbum(gallery);
+                if (total > 0 && album.getString("title").equals(albumList.get(total-1))) {
+
+                } else {
+                    albums.pushMap(album);
+                    albumList.add(album.getString("title"));
+                    total += 1;
+                }
+            } while (gallery.moveToNext());
+
+            response.putInt("totalAlbums", albumList.size());
+            response.putArray("albums", albums);
+
+            promise.resolve(response);
+
         } catch (SecurityException ex) {
             System.err.println(ex);
         } finally {
@@ -187,5 +196,9 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
 
     private Boolean isJellyBeanOrLater() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN;
+    }
+
+    private Boolean isQOrLater() {
+        return Build.VERSION.SDK_INT >= 29;
     }
 }
