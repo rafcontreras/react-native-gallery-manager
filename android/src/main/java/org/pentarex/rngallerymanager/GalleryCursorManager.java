@@ -26,7 +26,8 @@ public class GalleryCursorManager {
                 MediaStore.Images.Media.HEIGHT,
                 MediaStore.Images.Media.TITLE,
                 MediaStore.Files.FileColumns.MEDIA_TYPE,
-                MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+                MediaStore.Images.Media.ORIENTATION
         };
 
 
