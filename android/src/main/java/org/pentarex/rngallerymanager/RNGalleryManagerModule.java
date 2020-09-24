@@ -143,10 +143,12 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
         Double width = gallery.getDouble(gallery.getColumnIndex(MediaStore.Files.FileColumns.WIDTH));
         String uri = "file://" + gallery.getString(gallery.getColumnIndex(MediaStore.Files.FileColumns.DATA));
         Double id = gallery.getDouble(gallery.getColumnIndex(MediaStore.Files.FileColumns._ID));
+        String orientation = gallery.getString(gallery.getColumnIndex(MediaStore.Images.Media.ORIENTATION));
 
 
         asset.putString("mimeType", mimeType);
         asset.putString("creationDate", creationDate);
+        asset.putString("orientation", orientation);
         asset.putDouble("height", height);
         asset.putDouble("width", width);
         asset.putString("filename", fileName);
