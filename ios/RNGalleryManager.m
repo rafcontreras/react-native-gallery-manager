@@ -97,20 +97,27 @@ RCT_EXPORT_METHOD(getAssets:(NSDictionary *)params
   
   PHFetchResult<PHAsset *> * _Nonnull fetchResults;
   if (![albumName isEqualToString:@""])
-  {
-    PHFetchOptions *albumFetchOptions = [[PHFetchOptions alloc] init];
-    albumFetchOptions.predicate = [NSPredicate predicateWithFormat:@"title = %@", albumName];
-    __block PHAssetCollection *collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
-                                                                                     subtype:PHAssetCollectionSubtypeAny
-                                                                                     options:albumFetchOptions].firstObject;
-    fetchResults = [PHAsset fetchAssetsInAssetCollection:collection options:fetchOptions];
-  }
-  else
-  {
-    
-    fetchResults = [PHAsset fetchAssetsWithOptions:fetchOptions]; // get the assets
-  }
-  
+    {
+     if([albumName isEqualToString:@"Favourites"]){
+          __block PHAssetCollection *collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeSmartAlbum
+                                                                                                 subtype:PHAssetCollectionSubtypeSmartAlbumFavorites
+                                                                                                  options:nil].firstObject;
+          fetchResults = [PHAsset fetchAssetsInAssetCollection:collection options:fetchOptions];
+         } else {
+            PHFetchOptions *albumFetchOptions = [[PHFetchOptions alloc] init];
+            albumFetchOptions.predicate = [NSPredicate predicateWithFormat:@"title = %@", albumName];
+            __block PHAssetCollection *collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
+            subtype:PHAssetCollectionSubtypeAny
+            options:albumFetchOptions].firstObject;
+            fetchResults = [PHAsset fetchAssetsInAssetCollection:collection options:fetchOptions];
+          }
+    }
+    else
+    {
+
+      fetchResults = [PHAsset fetchAssetsWithOptions:fetchOptions]; // get the assets
+    }
+
   BOOL __block hasMore = NO;
   NSInteger endIndex = startFrom + limit;
   NSMutableArray<NSDictionary<NSString *, id> *> *assets = [NSMutableArray new];
@@ -130,15 +137,29 @@ RCT_EXPORT_METHOD(getAssets:(NSDictionary *)params
   NSArray<PHAsset*>  *results = [fetchResults objectsAtIndexes:indexSet];
   
   for (PHAsset* asset in results) {
-    NSArray *resources = [PHAssetResource assetResourcesForAsset:asset ];
-    if ([resources count] < 1) continue;
-    NSString *orgFilename = ((PHAssetResource*)resources[0]).originalFilename;
-    NSString *uit = ((PHAssetResource*)resources[0]).uniformTypeIdentifier;
+      NSUInteger resourceId = 0;
+        NSArray *resources = [PHAssetResource assetResourcesForAsset:asset ];
+        NSString *type = [self getMediaType:([asset mediaType])];
+        NSInteger resourceCount = [resources count];
+
+          if([type isEqualToString:@"video"] && resourceCount > 1) {
+              NSUInteger index = 0;
+              for(PHAssetResource* resource in resources) {
+                  if(resource.type == 2) {
+                      resourceId = index;
+                  }
+                  index++;
+              }
+          }
+
+    NSString *orgFilename = ((PHAssetResource*)resources[resourceId]).originalFilename;
+    NSString *uit = ((PHAssetResource*)resources[resourceId]).uniformTypeIdentifier;
     NSString *mimeType = (NSString *)CFBridgingRelease(UTTypeCopyPreferredTagWithClass((__bridge CFStringRef _Nonnull)(uit), kUTTagClassMIMEType));
     CFStringRef extension = UTTypeCopyPreferredTagWithClass((__bridge CFStringRef _Nonnull)(uit), kUTTagClassFilenameExtension);
+    BOOL __block bIsLocallayAvailable = [[resources.firstObject valueForKey:@"locallyAvailable"] boolValue]; // If this returns NO, then the asset is in iCloud and not saved locally yet
     
     [assets addObject:@{
-                        @"type": [self getMediaType:([asset mediaType])],
+                        @"type": type,
                         @"width": @([asset pixelWidth]),
                         @"height": @([asset pixelHeight]),
                         @"filename": orgFilename ?: @"",
@@ -147,7 +168,8 @@ RCT_EXPORT_METHOD(getAssets:(NSDictionary *)params
                         @"creationDate": [asset creationDate],
                         @"uri": [self buildAssetUri:[asset localIdentifier] extension:extension lowQ:NO],
                         @"lowQualityUri": [self buildAssetUri:[asset localIdentifier] extension:extension lowQ:YES],
-                        @"duration": @([asset duration])
+                        @"duration": @([asset duration]),
+                        @"locallyAvailable": @(bIsLocallayAvailable)
                         }];
   }
   
@@ -190,6 +212,90 @@ RCT_EXPORT_METHOD(getAlbums: (RCTPromiseResolveBlock)resolve
           );
   
   
+}
+
+*Get Icloud asset*/
+RCT_EXPORT_METHOD(getIcloudAsset:(NSDictionary *)file resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+    NSString *assetId = [RCTConvert NSString:file[@"id"]] ?: @"";
+    NSString *mimeType = [RCTConvert NSString:file[@"mimeType"]] ?: @"";
+    NSArray* localIds = [NSArray arrayWithObjects: assetId, nil];
+    PHAsset * _Nullable videoAsset = [PHAsset fetchAssetsWithLocalIdentifiers:localIds options:nil].firstObject;
+
+    // Getting information from the asset
+    CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, (__bridge CFStringRef _Nonnull)(mimeType), NULL);
+    NSString *extension = (NSString *)CFBridgingRelease(UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension));
+
+    // Creating output url and temp file name
+    NSURL * _Nullable temDir = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
+    NSString *newFileName = [[NSUUID UUID] UUIDString];
+    NSString *tempName = [NSString stringWithFormat: @"%@.%@", newFileName, extension];
+    NSURL *outputUrl = [NSURL fileURLWithPath:[temDir.path stringByAppendingPathComponent:tempName]];
+
+    // Setting video export session options
+    PHVideoRequestOptions *videoRequestOptions = [[PHVideoRequestOptions alloc] init];
+    videoRequestOptions.networkAccessAllowed = YES;
+    videoRequestOptions.deliveryMode = PHVideoRequestOptionsDeliveryModeHighQualityFormat;
+
+    // Creating new export session
+    [[PHImageManager defaultManager] requestExportSessionForVideo:videoAsset options:videoRequestOptions exportPreset:AVAssetExportPresetPassthrough resultHandler:^(AVAssetExportSession* exportSession, NSDictionary* info) {
+
+      exportSession.shouldOptimizeForNetworkUse = YES;
+      exportSession.outputFileType = AVFileTypeQuickTimeMovie;
+      exportSession.outputURL = outputUrl;
+      // Converting the video and waiting to see whats going to happen
+      [exportSession exportAsynchronouslyWithCompletionHandler:^{
+        switch ([exportSession status])
+        {
+          case AVAssetExportSessionStatusFailed:
+          {
+            NSError* error = exportSession.error;
+            NSString *codeWithDomain = [NSString stringWithFormat:@"E%@%zd", error.domain.uppercaseString, error.code];
+            reject(codeWithDomain, error.localizedDescription, error);
+            break;
+          }
+          case AVAssetExportSessionStatusCancelled:
+          {
+            NSError *error = [NSError errorWithDomain:@"RNGalleryManager" code: -91 userInfo:nil];
+            reject(@"Cancelled", @"Export canceled", error);
+            break;
+          }
+          case AVAssetExportSessionStatusCompleted:
+          {
+              NSArray *resources = [PHAssetResource assetResourcesForAsset:videoAsset ];
+              NSString *orgFilename = ((PHAssetResource*)resources[0]).originalFilename;
+              NSString *uit = ((PHAssetResource*)resources[0]).uniformTypeIdentifier;
+              NSString *mimeType = (NSString *)CFBridgingRelease(UTTypeCopyPreferredTagWithClass((__bridge CFStringRef _Nonnull)(uit), kUTTagClassMIMEType));
+              CFStringRef extension = UTTypeCopyPreferredTagWithClass((__bridge CFStringRef _Nonnull)(uit), kUTTagClassFilenameExtension);
+              BOOL __block bIsLocallayAvailable = [[resources.firstObject valueForKey:@"locallyAvailable"] boolValue];
+
+
+            resolve(
+                    @{
+                       @"type": [self getMediaType:([videoAsset mediaType])],
+                       @"width": @([videoAsset pixelWidth]),
+                       @"height": @([videoAsset pixelHeight]),
+                       @"filename": orgFilename ?: @"",
+                       @"mimeType": mimeType ?: @"",
+                       @"id": [videoAsset localIdentifier],
+                       @"creationDate": [videoAsset creationDate],
+                       @"uri": [self buildAssetUri:[videoAsset localIdentifier] extension:extension lowQ:NO],
+                       @"lowQualityUri": [self buildAssetUri:[videoAsset localIdentifier] extension:extension lowQ:YES],
+                       @"duration": @([videoAsset duration]),
+                       @"locallyAvailable": @(bIsLocallayAvailable)
+                      }
+                    );
+            break;
+          }
+          default:
+          {
+            NSError *error = [NSError errorWithDomain:@"RNGalleryManager" code: -91 userInfo:nil];
+            reject(@"Unknown", @"Unknown status", error);
+            break;
+          }
+        }
+      }];
+    }];
+
 }
 
 RCT_EXPORT_METHOD(convertVideo:(NSDictionary *)params
@@ -331,4 +437,3 @@ static void checkPhotoLibraryConfig()
 }
 
 @end
-
