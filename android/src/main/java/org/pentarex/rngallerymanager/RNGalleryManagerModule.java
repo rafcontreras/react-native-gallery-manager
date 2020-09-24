@@ -120,8 +120,6 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
             } else {
                 gallery = GalleryCursorManager.getAlbumCursor(reactContext);
             }
-
-            gallery = GalleryCursorManager.getQAlbumCursor(reactContext);
             WritableArray albums = new WritableNativeArray();
 
             gallery.moveToFirst();
@@ -131,10 +129,9 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
             do {
                 WritableMap album = getAlbum(gallery);
                 if (total > 0 && album.getString("title").equals(albumList.get(total-1))) {
-
                 } else {
+                albumList.add(album.getString("title"));
                     albums.pushMap(album);
-                    albumList.add(album.getString("title"));
                     total += 1;
                 }
             } while (gallery.moveToNext());
