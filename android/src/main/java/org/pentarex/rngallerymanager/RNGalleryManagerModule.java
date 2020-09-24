@@ -18,6 +18,9 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
 
     public static final String RNGALLERY_MANAGER = "RNGalleryManager";
@@ -112,19 +115,26 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
 
         Cursor gallery = null;
         try {
-            gallery = GalleryCursorManager.getAlbumCursor(reactContext);
-            WritableArray albums = new WritableNativeArray();
-            response.putInt("totalAlbums", gallery.getCount());
-            gallery.moveToFirst();
-            do {
-                WritableMap album = getAlbum(gallery);
-                albums.pushMap(album);
-            } while (gallery.moveToNext());
+                    gallery = GalleryCursorManager.getQAlbumCursor(reactContext);
+                    WritableArray albums = new WritableNativeArray();
 
-            response.putArray("albums", albums);
+                    gallery.moveToFirst();
+                    List<String> albumList = new ArrayList<String>();
+                    int total = 0;
+                    do {
+                        WritableMap album = getAlbum(gallery);
+                        if (total > 0 && album.getString("title").equals(albumList.get(total-1))) {
 
-            promise.resolve(response);
+                        } else {
+                            albums.pushMap(album);
+                            albumList.add(album.getString("title"));
+                            total += 1;
+                        }
+                    } while (gallery.moveToNext());
+                    response.putInt("totalAlbums", albumList.size());
+                    response.putArray("albums", albums);
 
+                    promise.resolve(response);
         } catch (SecurityException ex) {
             System.err.println(ex);
         } finally {
