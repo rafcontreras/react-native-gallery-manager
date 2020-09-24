@@ -61,6 +61,16 @@ const GalleryManager = {
      */
     convertVideo(params) {
         return RNGalleryManager.convertVideo(params);
+    },
+    
+    /**
+      * Get asset from Icloud
+      * @param file
+      * @returns {file}
+      */
+
+    getIcloudAsset(file) {
+        return RNGalleryManager.getIcloudAsset(file);
     }
 }
 
