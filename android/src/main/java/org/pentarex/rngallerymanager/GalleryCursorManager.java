@@ -87,4 +87,25 @@ public class GalleryCursorManager {
         return contentResolver.query(queryUri, projection, BUCKET_GROUP_BY, null, null);
 
     }
+
+    public static Cursor getQAlbumCursor(ReactApplicationContext reactContext){
+            String[] projection = new String[] {
+                    MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
+                    MediaStore.Images.ImageColumns.BUCKET_ID,
+                    MediaStore.Images.ImageColumns.DATE_MODIFIED,
+                    MediaStore.Images.ImageColumns.DATA,
+                    MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME,
+                    MediaStore.Video.VideoColumns.BUCKET_ID,
+                    MediaStore.Video.VideoColumns.DATE_MODIFIED,
+                    MediaStore.Video.VideoColumns.DATA,
+            };
+
+
+            ContentResolver contentResolver = reactContext.getContentResolver();
+            Uri queryUri = MediaStore.Files.getContentUri("external");
+
+            Cursor cursor = contentResolver.query(queryUri, projection, null, null, null);
+
+            return cursor;
+    }
 }
