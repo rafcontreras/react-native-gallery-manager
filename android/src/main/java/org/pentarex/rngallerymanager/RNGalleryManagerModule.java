@@ -180,9 +180,7 @@ public class RNGalleryManagerModule extends ReactContextBaseJavaModule {
     private WritableMap getAlbum(Cursor gallery) {
         WritableMap album = new WritableNativeMap();
         String albumName = gallery.getString(gallery.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME));
-        int assetCount = gallery.getInt(gallery.getColumnIndex("assetCount"));
         album.putString("title", albumName);
-        album.putInt("assetCount", assetCount);
         return album;
     }
 
