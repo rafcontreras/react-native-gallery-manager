@@ -214,7 +214,7 @@ RCT_EXPORT_METHOD(getAlbums: (RCTPromiseResolveBlock)resolve
   
 }
 
-*Get Icloud asset*/
+/*Get Icloud asset*/
 RCT_EXPORT_METHOD(getIcloudAsset:(NSDictionary *)file resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     NSString *assetId = [RCTConvert NSString:file[@"id"]] ?: @"";
     NSString *mimeType = [RCTConvert NSString:file[@"mimeType"]] ?: @"";
