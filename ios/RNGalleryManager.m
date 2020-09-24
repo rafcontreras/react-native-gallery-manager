@@ -198,6 +198,11 @@ RCT_EXPORT_METHOD(getAlbums: (RCTPromiseResolveBlock)resolve
   
   NSMutableArray<NSDictionary<NSString *, id> *> *result = [NSMutableArray new];
   [albums enumerateObjectsUsingBlock:^(PHAssetCollection * _Nonnull album, NSUInteger index, BOOL * _Nonnull stop) {
+
+    if(album.assetCollectionSubtype == 101){
+        return;
+    }
+
     [result addObject:@{
                         @"title": [album localizedTitle],
                         @"assetCount": @([album estimatedAssetCount])
