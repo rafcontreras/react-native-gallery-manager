@@ -3,19 +3,22 @@ def safeExtGet(prop, fallback) {
 }
 
 buildscript {
+  if (project == rootProject) {
     repositories {
-        jcenter()
+      jcenter()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.1'
+      classpath("com.android.tools.build:gradle:3.6.3")
     }
+  }
 }
 
 apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion safeExtGet('compileSdkVersion', 28)
+    buildToolsVersion safeExtGet('buildToolsVersion', '28.0.3')
 
     defaultConfig {
         minSdkVersion safeExtGet('minSdkVersion', 16)
@@ -33,4 +36,6 @@ repositories {
 }
 
 dependencies {
-    implementation "com.facebook.react:react-native:${safeExtGet('reactNativeVersion', '+')}"
+    //noinspection GradleDynamicVersion
+    implementation 'com.facebook.react:react-native:+'
+}
